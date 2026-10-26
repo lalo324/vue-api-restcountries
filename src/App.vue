@@ -47,10 +47,19 @@ async function obtenerPaises() {
       region: pais.region || pais.continent || 'Sin región',
       poblacion: pais.population ?? 0,
       bandera:
+      pais.name === 'Afghanistan' ||
+      pais.name?.common === 'Afghanistan'
+        ? 'https://flagcdn.com/w320/af.png'
+        : (
         pais.flags?.png ||
         pais.flags?.svg ||
         pais.flag ||
-        '',
+        (pais.alpha2Code
+          ? `https://flagcdn.com/w320/${pais.alpha2Code.toLowerCase()}.png`
+          : '')
+      ),
+
+
       codigo: (
         pais.cca2 ||
         pais.alpha2Code ||
