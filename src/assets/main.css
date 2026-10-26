@@ -1,35 +1,56 @@
+
 @import './base.css';
 
+/* Restablecer el ancho global de la aplicación */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  width: 100%;
+  min-width: 320px;
+  min-height: 100%;
+}
+
+body {
+  display: block !important;
+  width: 100% !important;
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: #090f20 !important;
+}
+
 #app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 100vh;
+  margin: 0 !important;
+  padding: 0 !important;
   font-weight: normal;
 }
 
-a,
-.green {
+/* Estilos generales de enlaces */
+a {
   text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
+  color: #5ce0bf;
+  transition: color 0.2s ease;
 }
 
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
+a:hover {
+  color: #8af3d8;
 }
 
-@media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: center;
-  }
+/* Evitar que imágenes y controles desborden sus contenedores */
+img {
+  max-width: 100%;
+}
 
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
-  }
+button,
+input {
+  font: inherit;
 }
