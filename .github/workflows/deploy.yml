@@ -32,8 +32,10 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
-      - name: Compilar proyecto Vue
+                 - name: Compilar proyecto Vue
         run: npm run build
+        env:
+          VITE_REST_COUNTRIES_API_KEY: ${{ secrets.VITE_REST_COUNTRIES_API_KEY }}
 
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
