@@ -3,227 +3,266 @@
 import { ref, computed, onMounted } from 'vue'
 
 const paises = ref([])
-const cargando = ref(false)
+const cargando = ref(true)
 const error = ref('')
 const busqueda = ref('')
 
-async function obtenerPaises() {
-  cargando.value = true
-  error.value = ''
+// Convierte los códigos internacionales en nombres de países en español.
+const nombresPaises = new Intl.DisplayNames(['es'], {
+  type: 'region'
+})
+
+function obtenerNombreEspanol(pais) {
+  const codigo = pais.cca2 || pais.alpha2Code || pais.alpha2
+
+  if (!codigo) {
+    return pais.translations?.spa?.common ||
+      pais.translations?.spa?.official ||
+      pais.name?.common ||
+      pais.name ||
+      'País sin nombre'
+  }
 
   try {
-    const respuesta = await fetch('https://countries.dev/countries')
-
-    if (!respuesta.ok) {
-      throw new Error(`Error HTTP: ${respuesta.status}`)
-    }
-
-    const resultado = await respuesta.json()
-
-    // Admite respuestas en forma de lista u objeto.
-    let lista = Array.isArray(resultado)
-      ? resultado
-      : Array.isArray(resultado.data)
-        ? resultado.data
-        : Array.isArray(resultado.countries)
-          ? resultado.countries
-          : resultado.data && typeof resultado.data === 'object'
-            ? Object.values(resultado.data)
-            : []
-
-    if (lista.length === 0) {
-      throw new Error('La API no devolvió una lista de países.')
-    }
-
-    paises.value = lista.map((pais) => ({
-      nombre:
-        pais.name?.common ||
-        pais.name ||
-        pais.commonName ||
-        'Nombre no disponible',
-      capital: Array.isArray(pais.capital)
-        ? pais.capital[0] || 'Sin capital'
-        : pais.capital || 'Sin capital',
-      region: pais.region || pais.continent || 'Sin región',
-      poblacion: pais.population ?? 0,
-      bandera:
-      pais.name === 'Afghanistan' ||
-      pais.name?.common === 'Afghanistan'
-        ? 'https://flagcdn.com/w320/af.png'
-        : (
-        pais.flags?.png ||
-        pais.flags?.svg ||
-        pais.flag ||
-        (pais.alpha2Code
-          ? `https://flagcdn.com/w320/${pais.alpha2Code.toLowerCase()}.png`
-          : '')
-      ),
-
-
-      codigo: (
-        pais.cca2 ||
-        pais.alpha2Code ||
-        pais.alpha2 ||
-        pais.code ||
-        ''
-      ).toLowerCase()
-    }))
-
-    paises.value.sort((a, b) =>
-      a.nombre.localeCompare(b.nombre)
-    )
-  } catch (e) {
-    console.error('Error al consultar países:', e)
-    error.value =
-      'No se pudieron cargar los países. Intenta nuevamente.'
-  } finally {
-    cargando.value = false
+    return nombresPaises.of(codigo.toUpperCase()) || pais.name?.common || pais.name
+  } catch {
+    return pais.name?.common || pais.name || 'País sin nombre'
   }
 }
 
+function obtenerNombreOriginal(pais) {
+  return pais.name?.common || pais.name || ''
+}
+
+function obtenerBandera(pais) {
+  return pais.flags?.svg ||
+    pais.flags?.png ||
+    pais.flag ||
+    ''
+}
+
+function obtenerCapital(pais) {
+  const capital = pais.capital
+  if (Array.isArray(capital)) return capital.join(', ') || 'No disponible'
+  return capital || 'No disponible'
+}
+
+function obtenerRegion(pais) {
+  const region = pais.region || pais.continent || ''
+  const traducciones = {
+    Africa: 'África',
+    Americas: 'América',
+    Asia: 'Asia',
+    Europe: 'Europa',
+    Oceania: 'Oceanía',
+    Antarctic: 'Antártida',
+    'North America': 'América del Norte',
+    'South America': 'América del Sur'
+  }
+  return traducciones[region] || region || 'No disponible'
+}
+
+function obtenerPoblacion(pais) {
+  const poblacion = Number(pais.population)
+  return Number.isFinite(poblacion)
+    ? poblacion.toLocaleString('es-MX')
+    : 'No disponible'
+}
+
 const paisesFiltrados = computed(() => {
-  const texto = busqueda.value.trim().toLowerCase()
+  const texto = busqueda.value.trim().toLocaleLowerCase('es')
 
-  if (!texto) return paises.value
+  return paises.value.filter(pais => {
+    const nombreEspanol = obtenerNombreEspanol(pais)
+      .toLocaleLowerCase('es')
+    const nombreOriginal = obtenerNombreOriginal(pais)
+      .toLocaleLowerCase('es')
 
-  return paises.value.filter((pais) =>
-    pais.nombre.toLowerCase().includes(texto) ||
-    pais.capital.toLowerCase().includes(texto) ||
-    pais.region.toLowerCase().includes(texto)
-  )
+    return nombreEspanol.includes(texto) ||
+      nombreOriginal.includes(texto)
+  })
 })
 
-onMounted(obtenerPaises)
+onMounted(async () => {
+  try {
+    cargando.value = true
+    error.value = ''
+
+    const respuesta = await fetch('https://countries.dev/countries')
+
+    if (!respuesta.ok) {
+      throw new Error('No se pudieron obtener los países')
+    }
+
+    const datos = await respuesta.json()
+
+    // La API puede devolver una lista o un objeto con la lista.
+    const lista = Array.isArray(datos)
+      ? datos
+      : datos.countries || datos.data || []
+
+    if (!Array.isArray(lista)) {
+      throw new Error('El formato de los datos no es válido')
+    }
+
+    paises.value = lista
+  } catch (e) {
+    console.error(e)
+    error.value = 'No pudimos cargar los países. Comprueba tu conexión e inténtalo de nuevo.'
+  } finally {
+    cargando.value = false
+  }
+})
 </script>
 
 <template>
   <div class="pagina">
     <header class="encabezado">
       <div class="marca">
-        <span class="globo">🌍</span>
-        <span>WORLD<span class="marca-color">EXPLORER</span></span>
+        <span class="icono-mundo">🌎</span>
+        <span>WorldExplorer</span>
       </div>
-      <span class="etiqueta">PROYECTO VUE 3 · UNIDAD 3</span>
+      <p>Descubre el mundo, país por país</p>
     </header>
 
     <main class="contenido">
       <section class="presentacion">
-        <span class="sobretitulo">DESCUBRE EL MUNDO</span>
-        <h1>Explorador de <span>Países</span></h1>
+        <span class="etiqueta">EXPLORA EL PLANETA</span>
+        <h1>El mundo en tus manos</h1>
         <p>
-          Explora países, conoce sus capitales y descubre
-          información de diferentes regiones del planeta.
+          Descubre países, conoce sus banderas y explora información
+          de todo el mundo.
         </p>
 
-        <div class="estadisticas">
-          <div>
-            <strong>{{ paises.length }}</strong>
-            <span>Países cargados</span>
-          </div>
-          <div>
-            <strong>{{ paisesFiltrados.length }}</strong>
-            <span>Resultados</span>
-          </div>
-        </div>
-      </section>
-
-      <section class="buscador">
-        <label for="busqueda">BUSCA TU PRÓXIMO DESTINO</label>
-        <div class="campo-busqueda">
-          <span>🔎</span>
+        <div class="buscador">
+          <span aria-hidden="true">🔎</span>
           <input
-            id="busqueda"
             v-model="busqueda"
             type="search"
-            placeholder="Busca por país, capital o región..."
+            placeholder="Buscar un país, por ejemplo España..."
+            aria-label="Buscar país"
           />
+          <button
+            v-if="busqueda"
+            type="button"
+            class="limpiar"
+            @click="busqueda = ''"
+          >
+            Limpiar
+          </button>
         </div>
+
+        <p class="contador" v-if="!cargando && !error">
+          {{ paisesFiltrados.length }} países encontrados
+        </p>
       </section>
 
       <section class="seccion-paises">
-        <div class="titulo-lista">
+        <div class="titulo-seccion">
           <div>
-            <h2>Países del mundo</h2>
-            <p>Información consultada desde countries.dev.</p>
+            <h2>Explora los países</h2>
+            <p>Información para conocer mejor nuestro planeta.</p>
           </div>
-          <button
-            class="boton-actualizar"
-            @click="obtenerPaises"
-            :disabled="cargando"
-          >
-            {{ cargando ? 'Cargando...' : '↻ Actualizar' }}
-          </button>
         </div>
 
-        <div v-if="cargando" class="mensaje">
-          <span class="spinner"></span>
-          <h3>Cargando países...</h3>
-          <p>Estamos consultando la información.</p>
+        <div v-if="cargando" class="estado">
+          <div class="spinner"></div>
+          <p>Cargando países...</p>
         </div>
 
-        <div v-else-if="error" class="mensaje">
-          <span class="icono-aviso">⚠️</span>
-          <h3>No se pudieron cargar los países</h3>
+        <div v-else-if="error" class="estado error">
+          <span>⚠️</span>
           <p>{{ error }}</p>
-          <button class="boton-principal" @click="obtenerPaises">
-            Intentar de nuevo
-          </button>
+          <button @click="window.location.reload()">Volver a intentar</button>
         </div>
 
-        <div
-          v-else-if="paisesFiltrados.length === 0"
-          class="mensaje"
-        >
-          <span class="icono-aviso">🔎</span>
-          <h3>No se encontraron países</h3>
-          <p>Prueba con otro nombre, capital o región.</p>
+        <div v-else-if="paisesFiltrados.length === 0" class="estado">
+          <span>🔎</span>
+          <p>No encontramos países que coincidan con tu búsqueda.</p>
+          <button @click="busqueda = ''">Mostrar todos los países</button>
         </div>
 
         <div v-else class="rejilla">
           <article
             v-for="(pais, indice) in paisesFiltrados"
-            :key="pais.codigo || pais.nombre + indice"
+            :key="pais.cca3 || pais.cca2 || obtenerNombreOriginal(pais) || indice"
             class="tarjeta"
           >
-            <img
-              v-if="pais.bandera"
-              class="bandera"
-              :src="pais.bandera"
-              :alt="'Bandera de ' + pais.nombre"
-              loading="lazy"
-            />
-            <div v-else class="bandera-sin-imagen">🌐</div>
+            <div class="bandera-contenedor">
+              <img
+                v-if="obtenerBandera(pais)"
+                :src="obtenerBandera(pais)"
+                :alt="'Bandera de ' + obtenerNombreEspanol(pais)"
+                class="bandera"
+                loading="lazy"
+              />
+              <span v-else class="bandera-faltante">🌎</span>
+            </div>
 
             <div class="datos-pais">
-              <h3>{{ pais.nombre }}</h3>
-              <p><span>Capital:</span> {{ pais.capital }}</p>
-              <p><span>Región:</span> {{ pais.region }}</p>
-              <p>
-                <span>Población:</span>
-                {{ Number(pais.poblacion).toLocaleString('es-MX') }}
-              </p>
+              <h3>{{ obtenerNombreEspanol(pais) }}</h3>
+
+              <div class="dato">
+                <span class="dato-icono">📍</span>
+                <span>
+                  <strong>Capital</strong>
+                  {{ obtenerCapital(pais) }}
+                </span>
+              </div>
+
+              <div class="dato">
+                <span class="dato-icono">🗺️</span>
+                <span>
+                  <strong>Región</strong>
+                  {{ obtenerRegion(pais) }}
+                </span>
+              </div>
+
+              <div class="dato">
+                <span class="dato-icono">👥</span>
+                <span>
+                  <strong>Población</strong>
+                  {{ obtenerPoblacion(pais) }}
+                </span>
+              </div>
             </div>
           </article>
         </div>
       </section>
     </main>
 
-    <footer>
-      <p>WORLD EXPLORER · Desarrollado con Vue 3 y Fetch API</p>
+    <footer class="pie">
+      <p>WorldExplorer · Proyecto desarrollado con Vue 3 y una API REST</p>
     </footer>
   </div>
 </template>
 
 <style>
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
-body {
+:root {
+  color-scheme: dark;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  background: #090f20;
+  color: #f3f6ff;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  min-width: 320px;
+  min-height: 100%;
   margin: 0;
-  background: #f0f2f7;
-  font-family: Inter, "Segoe UI", Arial, sans-serif;
-  color: #e5eaf5;
+}
+
+body {
+  background: #090f20;
 }
 
 button,
@@ -231,266 +270,258 @@ input {
   font: inherit;
 }
 
+button {
+  cursor: pointer;
+}
+
 .pagina {
-  width: min(100%, 1100px);
   min-height: 100vh;
-  margin: 0 auto;
-  background: #090f20;
-  box-shadow: 0 0 35px #17223b25;
+  width: 100%;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(37, 83, 128, 0.18), transparent 42%),
+    #090f20;
 }
 
 .encabezado {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 25px 30px;
-  border-bottom: 1px solid #27354d;
+  width: 100%;
+  padding: 22px 6%;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(11, 18, 36, 0.85);
 }
 
 .marca {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-weight: 800;
-  letter-spacing: 1px;
+  font-size: 21px;
+  font-weight: 750;
+  letter-spacing: -0.5px;
 }
 
-.globo {
-  font-size: 26px;
+.icono-mundo {
+  font-size: 27px;
 }
 
-.marca-color {
-  color: #5ce0bf;
-}
-
-.etiqueta,
-.sobretitulo {
-  color: #a8b8d5;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1.4px;
+.encabezado > p {
+  margin: 5px 0 0 38px;
+  color: #9ba9c4;
+  font-size: 13px;
 }
 
 .contenido {
-  padding: 35px 30px 55px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 6%;
 }
 
 .presentacion {
+  max-width: 850px;
+  margin: 0 auto;
+  padding: 64px 0 42px;
   text-align: center;
-  max-width: 650px;
-  margin: 0 auto 40px;
 }
 
-.sobretitulo {
+.etiqueta {
+  display: inline-block;
+  padding: 7px 13px;
+  border: 1px solid rgba(92, 224, 191, 0.3);
+  border-radius: 30px;
+  background: rgba(92, 224, 191, 0.08);
   color: #5ce0bf;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 1.7px;
 }
 
 .presentacion h1 {
-  margin: 14px 0;
-  color: #f1f5ff;
-  font-size: clamp(32px, 6vw, 52px);
-  line-height: 1.15;
+  margin: 20px 0 12px;
+  font-size: clamp(32px, 5vw, 53px);
+  line-height: 1.12;
+  letter-spacing: -1.8px;
 }
 
-.presentacion h1 span {
-  color: #5ce0bf;
-}
-
-.presentacion > p {
-  color: #b9c8df;
-  line-height: 1.8;
-}
-
-.estadisticas {
-  display: flex;
-  justify-content: center;
-  gap: 65px;
-  margin-top: 30px;
-}
-
-.estadisticas div {
-  display: grid;
-  gap: 8px;
-}
-
-.estadisticas strong {
-  color: #5ce0bf;
-  font-size: 28px;
-  font-weight: 500;
-}
-
-.estadisticas span {
-  color: #bdc9dd;
-  font-size: 12px;
+.presentacion > p:not(.contador) {
+  max-width: 620px;
+  margin: 0 auto;
+  color: #a8b4cc;
+  font-size: 15px;
+  line-height: 1.7;
 }
 
 .buscador {
-  margin-bottom: 38px;
-}
-
-.buscador label {
-  display: block;
-  margin-bottom: 12px;
-  color: #bdc9dd;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1px;
-}
-
-.campo-busqueda {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 16px;
-  background: #131e33;
-  border: 1px solid #30415d;
-  border-radius: 12px;
-}
-
-.campo-busqueda input {
   width: 100%;
-  padding: 17px 0;
-  color: white;
+  max-width: 620px;
+  min-height: 58px;
+  margin: 30px auto 0;
+  padding: 0 18px;
+  border: 1px solid #293650;
+  border-radius: 15px;
+  background: #111a2e;
+  box-shadow: 0 12px 38px rgba(0, 0, 0, 0.18);
+}
+
+.buscador > span {
+  font-size: 18px;
+}
+
+.buscador input {
+  flex: 1;
+  width: 0;
+  border: 0;
+  outline: 0;
   background: transparent;
-  border: none;
-  outline: none;
+  color: #f3f6ff;
+  font-size: 14px;
 }
 
-.campo-busqueda input::placeholder {
-  color: #8092b2;
+.buscador input::placeholder {
+  color: #7886a1;
 }
 
-.titulo-lista {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 15px;
-  margin-bottom: 22px;
-}
-
-.titulo-lista h2 {
-  margin: 0 0 8px;
-  color: #f1f5ff;
-  font-size: 23px;
-  font-weight: 500;
-}
-
-.titulo-lista p,
-.mensaje p {
-  color: #aebed8;
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.boton-actualizar {
-  flex-shrink: 0;
-  padding: 12px 15px;
+.limpiar {
+  border: 0;
+  background: transparent;
   color: #5ce0bf;
-  background: #131e33;
-  border: 1px solid #344765;
-  border-radius: 9px;
-  cursor: pointer;
+  font-size: 12px;
 }
 
-.boton-actualizar:disabled {
-  opacity: 0.6;
-  cursor: wait;
+.contador {
+  margin-top: 14px !important;
+  color: #8190ad !important;
+  font-size: 12px !important;
+}
+
+.seccion-paises {
+  width: 100%;
+  padding: 10px 0 60px;
+}
+
+.titulo-seccion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.titulo-seccion h2 {
+  margin: 0 0 6px;
+  font-size: 25px;
+  letter-spacing: -0.5px;
+}
+
+.titulo-seccion p {
+  margin: 0;
+  color: #8997b2;
+  font-size: 13px;
 }
 
 .rejilla {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
+  gap: 20px;
+  width: 100%;
 }
 
 .tarjeta {
+  min-width: 0;
   overflow: hidden;
-  background: #131e33;
-  border: 1px solid #293b57;
-  border-radius: 13px;
-  transition: transform 0.2s, border-color 0.2s;
+  border: 1px solid #26324a;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #121d32, #0e1729);
+  transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
 .tarjeta:hover {
-  transform: translateY(-3px);
-  border-color: #5ce0bf;
+  transform: translateY(-4px);
+  border-color: #3e7b82;
+}
+
+.bandera-contenedor {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 150px;
+  overflow: hidden;
+  background: #17233a;
 }
 
 .bandera {
-  display: block;
   width: 100%;
-  height: 145px;
+  height: 100%;
   object-fit: cover;
-  background: #202d44;
 }
 
-.bandera-sin-imagen {
-  display: grid;
-  height: 145px;
-  place-items: center;
+.bandera-faltante {
   font-size: 42px;
-  background: #202d44;
 }
 
 .datos-pais {
-  padding: 16px;
+  padding: 18px;
 }
 
 .datos-pais h3 {
-  margin: 0 0 14px;
-  color: #5ce0bf;
-  font-size: 18px;
+  margin: 0 0 17px;
+  font-size: 19px;
+  line-height: 1.3;
 }
 
-.datos-pais p {
-  margin: 8px 0;
-  color: #d2dced;
-  font-size: 13px;
+.dato {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 13px;
+  color: #d4dced;
+  font-size: 12px;
+  line-height: 1.5;
   overflow-wrap: anywhere;
 }
 
-.datos-pais p span {
-  color: #91a6c8;
+.dato-icono {
+  flex-shrink: 0;
+  width: 18px;
 }
 
-.mensaje {
+.dato strong {
+  display: block;
+  margin-bottom: 2px;
+  color: #8292b0;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.estado {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 245px;
-  padding: 25px;
+  gap: 12px;
+  min-height: 220px;
+  color: #a8b4cc;
   text-align: center;
-  background: #131e33;
-  border: 1px solid #293b57;
-  border-radius: 14px;
 }
 
-.mensaje h3 {
-  margin: 14px 0 4px;
-  color: #e5eaf5;
+.estado > span {
+  font-size: 32px;
 }
 
-.icono-aviso {
-  font-size: 30px;
-}
-
-.boton-principal {
-  margin-top: 10px;
-  padding: 13px 20px;
-  color: #081521;
-  background: #5ce0bf;
-  border: none;
+.estado button {
+  padding: 10px 16px;
+  border: 1px solid #36526b;
   border-radius: 9px;
-  font-weight: 700;
-  cursor: pointer;
+  background: #14263a;
+  color: #5ce0bf;
 }
 
 .spinner {
-  width: 35px;
-  height: 35px;
-  border: 3px solid #30415d;
+  width: 36px;
+  height: 36px;
+  border: 3px solid #293650;
   border-top-color: #5ce0bf;
   border-radius: 50%;
   animation: girar 0.8s linear infinite;
@@ -502,32 +533,41 @@ input {
   }
 }
 
-footer {
-  padding: 22px;
-  text-align: center;
-  border-top: 1px solid #27354d;
-  color: #8395b5;
+.error {
+  color: #ffb6b6;
+}
+
+.pie {
+  padding: 24px 6%;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: #7886a1;
   font-size: 12px;
+  text-align: center;
 }
 
 @media (max-width: 600px) {
   .encabezado {
-    align-items: flex-start;
-    flex-direction: column;
-    padding: 20px;
+    padding: 18px 5%;
   }
 
   .contenido {
-    padding: 30px 18px;
+    padding: 0 5%;
   }
 
-  .titulo-lista {
-    align-items: flex-start;
-    flex-direction: column;
+  .presentacion {
+    padding: 45px 0 32px;
+  }
+
+  .presentacion h1 {
+    letter-spacing: -1px;
   }
 
   .rejilla {
     grid-template-columns: 1fr;
+  }
+
+  .titulo-seccion h2 {
+    font-size: 22px;
   }
 }
 </style>
