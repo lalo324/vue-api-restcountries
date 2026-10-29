@@ -1,38 +1,50 @@
-# vue-api-restcountries
 
-This template should help get you started developing with Vue 3 in Vite.
+# Explorador de Países
 
-## Recommended IDE Setup
+Aplicación web desarrollada con Vue 3 que permite explorar información de diferentes países mediante la API REST Countries.
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+## Descripción
 
-## Recommended Browser Setup
+El objetivo del proyecto es consultar y presentar información de países de manera sencilla e intuitiva, utilizando una interfaz desarrollada con Vue 3.
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+## Tecnologías utilizadas
 
-## Customize configuration
+- Vue 3: desarrollo de la interfaz de usuario.
+- JavaScript: lógica de la aplicación.
+- Vite: entorno de desarrollo y compilación.
+- REST Countries API: consulta de información de países.
+- HTML y CSS: estructura y estilos de la interfaz.
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+## Instalación y ejecución
 
-## Project Setup
+1. Clona el repositorio.
+2. Abre una terminal en la carpeta del proyecto.
+3. Instala las dependencias:
 
-```sh
-npm install
-```
+   ```bash
+   npm install
+   ```
 
-### Compile and Hot-Reload for Development
+4. Inicia el servidor de desarrollo:
 
-```sh
-npm run dev
-```
+   ```bash
+   npm run dev
+   ```
 
-### Compile and Minify for Production
+5. Abre en el navegador la dirección local que indique la terminal.
 
-```sh
+## Compilación para producción
+
+Para generar la versión de producción, ejecuta:
+
+```bash
 npm run build
+```
+
+## Autoría y colaboración
+
+Este proyecto tiene como propósito practicar el desarrollo de aplicaciones web con Vue 3 y el consumo de APIs REST.
+
+Las contribuciones y mejoras al proyecto ayudan a fortalecer el aprendizaje y el trabajo colaborativo.
+
 ```
