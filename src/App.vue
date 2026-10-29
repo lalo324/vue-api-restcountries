@@ -68,7 +68,6 @@ function obtenerPoblacion(pais) {
     ? poblacion.toLocaleString('es-MX')
     : 'No disponible'
 }
-
 const paisesFiltrados = computed(() => {
   const texto = busqueda.value.trim().toLocaleLowerCase('es')
 
@@ -77,12 +76,14 @@ const paisesFiltrados = computed(() => {
       .toLocaleLowerCase('es')
     const nombreOriginal = obtenerNombreOriginal(pais)
       .toLocaleLowerCase('es')
+    const capital = obtenerCapital(pais)
+      .toLocaleLowerCase('es')
 
     return nombreEspanol.includes(texto) ||
-      nombreOriginal.includes(texto)
+      nombreOriginal.includes(texto) ||
+      capital.includes(texto)
   })
 })
-
 onMounted(async () => {
   try {
     cargando.value = true
