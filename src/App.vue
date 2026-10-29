@@ -68,7 +68,7 @@ function obtenerPoblacion(pais) {
     ? poblacion.toLocaleString('es-MX')
     : 'No disponible'
 }
-const paisesFiltrados = computed(() => {
+  const paisesFiltrados = computed(() => {
   const texto = busqueda.value.trim().toLocaleLowerCase('es')
 
   return paises.value.filter(pais => {
